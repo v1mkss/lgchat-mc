@@ -19,7 +19,6 @@ object LGChat extends ModInitializer {
   def getPlayerPrefersPrefixForGlobal(playerUuid: java.util.UUID): Boolean =
     playerChatModePref.getOrDefault(playerUuid, true)
 
-
   override def onInitialize(): Unit = {
     LOGGER.info("LGChat is initializing...")
     Lang.initialize()
