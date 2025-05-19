@@ -1,48 +1,56 @@
 # LGChat
 
-## Description
+## Overview
 
-LGChat is a Minecraft mod that adds local and global chat channels to the game. It allows players to communicate within a defined radius (local chat) or across the entire server (global chat).
+LGChat is a Minecraft mod designed to enhance player communication by introducing distinct local and global chat channels. This mod leverages the Fabric API to provide a seamless and efficient chat experience, allowing players to communicate effectively within a specified radius or across the entire server.
 
-## Features
+## Key Features
 
--   **Local Chat:** Communicate with players in a specific radius around you.
--   **Global Chat:** Communicate with all players on the server.
--   **Configurable Chat Modes:** Players can choose their preferred chat mode.
--   **Language Support:** Supports multiple languages for in-game messages.
+- **Local Chat:** Enables proximity-based communication, fostering localized interactions among players.
+- **Global Chat:** Facilitates server-wide communication, ensuring announcements and general discussions reach all players.
+- **Chat Mode Preference:** Players can personalize their chat experience by setting a preferred chat mode, defaulting to global.
+- **Language Localization:** Supports multiple languages for in-game messages, enhancing accessibility and user experience.
+- **Team Color Integration:** Player names in chat messages are colored based on their scoreboard team, enhancing visual clarity and team identification.
 
-## Setup
+## Installation
 
 ### Prerequisites
 
--   Java 17 or higher
--   Minecraft 1.20.1
--   Fabric Loader 0.16.14
--   Fabric API
+- Java 17 or higher
+- Minecraft 1.20.1
+- Fabric Loader (version >= 0.16.14)
+- Fabric API (version >= 0.92.5+1.20.1)
+- Fabric Language Scala (version >= 0.3.1)
 
-### Installation
+### Setup Instructions
 
-1.  Download the latest release of LGChat from [GitHub Releases](link-to-releases).
-2.  Place the downloaded `.jar` file into your Minecraft's `mods` folder.
-3.  Start the Minecraft server with Fabric Loader.
+1.  Download the latest stable release of LGChat from the [GitHub Releases](link-to-releases) page.
+2.  Place the downloaded `.jar` file into the `mods` directory of your Minecraft server or client installation.
+3.  Start the Minecraft server or client with the Fabric Loader.
 
 ## Usage
 
 ### Chat Commands
 
--   `/lgchat local !`: Sets the chat mode to local, using "!" for local chat.
--   `/lgchat global !`: Sets the chat mode to global, using "!" for global chat.
--   `/lgchat lang <language>`: Sets the language for in-game messages.
--   `/lgchat lang`: Shows the current language.
+LGChat provides a set of commands to manage chat preferences and language settings:
+
+- `/lgchat local !`: Sets the chat mode to local, requiring the "!" prefix for local messages.
+- `/lgchat global !`: Sets the chat mode to global, requiring the "!" prefix for global messages.
+- `/lgchat lang <language>`: Sets the language for in-game messages. Supported languages: `en` (English), `uk` (Ukrainian).
+- `/lgchat lang`: Displays the currently selected language.
 
 ### Configuration
 
-The mod's behavior can be configured through the `fabric.mod.json` file.
+The base mod configuration is located in `common/src/main/resources/fabric.mod.json`.
 
 ## Contributing
 
-Contributions are welcome! Please submit a pull request with your changes.
+We welcome contributions to LGChat! If you have suggestions, bug reports, or would like to contribute code, please follow these guidelines:
+
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Submit a pull request with a clear description of your changes.
 
 ## License
 
-This project is licensed under the MIT License.
+LGChat is licensed under the [MIT License](LICENSE).
