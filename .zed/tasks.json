@@ -1,0 +1,24 @@
+[
+  {
+    "label": "Build",
+    "command": "./gradlew jar",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "tags": []
+  },
+  {
+    "label": "Run Server",
+    "command": "./gradlew common:runServer",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "tags": []
+  }
+]
