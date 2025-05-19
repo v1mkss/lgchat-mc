@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "lgchat",
+  "version": "${version}",
+  "name": "lgchat",
+  "description": "Adds local and global chat channels to Minecraft.",
+  "authors": ["v1mkss"],
+  "contact": {
+    "homepage": "",
+    "sources": ""
+  },
+  "license": "MIT",
+  "icon": "assets/lgchat/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      {
+        "adapter": "scala",
+        "value": "dev.v1mkss.lgchat.LGChat"
+      }
+    ],
+    "server": [
+      {
+        "adapter": "scala",
+        "value": "dev.v1mkss.lgchat.LGChatServer"
+      }
+    ]
+  },
+  "mixins": ["lgchat.mixins.json"],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=17"
+  },
+  "requires": {
+    "fabric-language-scala": "*"
+  },
+  "suggests": {}
+}

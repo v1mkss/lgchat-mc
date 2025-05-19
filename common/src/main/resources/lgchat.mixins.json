@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "package": "dev.v1mkss.lgchat.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
