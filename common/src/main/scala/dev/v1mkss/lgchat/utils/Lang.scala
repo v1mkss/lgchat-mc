@@ -65,6 +65,18 @@ object MessageKey {
   case object SymbolLangLocalChat extends MessageKey {
     val id = "chat.lang.local.symbol"
   }
+  case object ErrorNotInTeam extends MessageKey {
+    val id = "message.lgchat.error_not_in_team"
+  }
+  case object SymbolTeamChat extends MessageKey {
+    val id = "message.lgchat.symbol_team_chat"
+  }
+  case object ErrorEmptyMessage extends MessageKey {
+    val id = "message.lgchat.error_empty_message"
+  }
+  case object CommandTchatUsage extends MessageKey {
+    val id = "commands.tchat.usage"
+  }
 }
 // --- End Enum Definitions ---
 
@@ -118,7 +130,15 @@ object Lang {
       MessageKey.SymbolLangGlobalChat ->
         txt("G", Formatting.YELLOW),
       MessageKey.SymbolLangLocalChat ->
-        txt("L", Formatting.GREEN)
+        txt("L", Formatting.GREEN),
+      MessageKey.ErrorNotInTeam ->
+        txt("You are not in a team.", Formatting.RED),
+      MessageKey.SymbolTeamChat ->
+        txt("T", Formatting.AQUA),
+      MessageKey.ErrorEmptyMessage ->
+        txt("Message cannot be empty.", Formatting.RED),
+      MessageKey.CommandTchatUsage ->
+        txt("Usage: /tchat <message>", Formatting.GRAY)
     )
 
     // --- Ukrainian Messages ---
@@ -156,7 +176,15 @@ object Lang {
       MessageKey.SymbolLangGlobalChat ->
         txt("Г", Formatting.YELLOW),
       MessageKey.SymbolLangLocalChat ->
-        txt("Л", Formatting.GREEN)
+        txt("Л", Formatting.GREEN),
+      MessageKey.ErrorNotInTeam ->
+        txt("Ви не перебуваєте в команді.", Formatting.RED),
+      MessageKey.SymbolTeamChat ->
+        txt("К", Formatting.AQUA),
+      MessageKey.ErrorEmptyMessage ->
+        txt("Повідомлення не може бути порожнім.", Formatting.RED),
+      MessageKey.CommandTchatUsage ->
+        txt("Використання: /tchat <повідомлення>", Formatting.GRAY)
     )
   }
 

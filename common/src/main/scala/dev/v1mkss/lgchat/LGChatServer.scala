@@ -1,6 +1,7 @@
 package dev.v1mkss.lgchat
 
 import dev.v1mkss.lgchat.commands.ChatModeCommand
+import dev.v1mkss.lgchat.commands.TeamChatCommand
 import dev.v1mkss.lgchat.LGChat
 
 import net.fabricmc.api.DedicatedServerModInitializer
@@ -19,6 +20,7 @@ object LGChatServer extends DedicatedServerModInitializer {
     CommandRegistrationCallback.EVENT.register {
       (dispatcher, registryAccess, environment) =>
         ChatModeCommand.register(dispatcher, registryAccess, environment)
+        TeamChatCommand.register(dispatcher, registryAccess, environment)
     }
 
     LGChat.LOGGER.info("Registered LGChat commands")

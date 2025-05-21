@@ -26,6 +26,7 @@ object ChatModeCommand {
   ): Unit = {
     // Create the root builder first
     val rootCommandBuilder = mcLiteral("lgchat")
+      .requires(_.hasPermissionLevel(4)) // Require operator rights
 
     // Apply .then and .executes to this val
     rootCommandBuilder

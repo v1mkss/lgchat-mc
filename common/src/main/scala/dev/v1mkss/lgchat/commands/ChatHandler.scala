@@ -8,8 +8,7 @@ import net.minecraft.server.network.{
   ServerPlayNetworkHandler,
   ServerPlayerEntity
 }
-import net.minecraft.text.{MutableText, Text, Style}
-import net.minecraft.util.Formatting
+import net.minecraft.text.{MutableText, Text, Style, TranslatableTextContent}
 import net.minecraft.world.World
 import dev.v1mkss.lgchat.utils.Lang
 
@@ -18,8 +17,11 @@ import dev.v1mkss.lgchat.LGChat
 import dev.v1mkss.lgchat.utils.MessageKey
 import net.minecraft.scoreboard.Team
 import net.fabricmc.fabric.api.networking.v1.PacketSender
+import net.minecraft.util.Formatting
 
 object ChatHandler {
+
+  private val TEAM_CHAT_PREFIX: String = "%" // Define team chat prefix
 
   private def getPlayerNameColor(
       player: ServerPlayerEntity,
@@ -37,11 +39,60 @@ object ChatHandler {
   }
 
   def register(): Unit = {
+    // Handle chat messages manually
     ServerMessageEvents.ALLOW_CHAT_MESSAGE.register {
-      (message, sender, params) =>
+      (message, sender, params) => // params here IS MessageType.Parameters
         onChatMessage(message, sender, params)
-        false
+        false // Prevent the default chat message handling
     }
+
+    // Suppress default join/leave messages
+    ServerMessageEvents.GAME_MESSAGE.register {
+      (server, message, overlay) => // overlay here IS Boolean
+        onGameMessage(server, message, overlay) // Pass overlay
+    }
+
+    // Register player join event handler (sends custom message)
+    ServerPlayConnectionEvents.JOIN.register {
+      (handler, packetSender, server) =>
+        onPlayerJoin(handler, packetSender, server)
+    }
+
+    // Register player disconnect event handler (sends custom message)
+    ServerPlayConnectionEvents.DISCONNECT.register { (handler, server) =>
+      onPlayerDisconnect(handler, server)
+    }
+  }
+
+  // Intercept game messages (including join/leave)
+  private def onGameMessage(
+      server: MinecraftServer,
+      message: Text,
+      overlay: Boolean // Changed from MessageType.Parameters to Boolean
+  ): Text = {
+    // Suppress default join and leave messages by checking their content.
+    // The 'overlay' parameter indicates if it's an action bar message.
+    // Vanilla join/leave messages are not overlay messages.
+
+    message.getContent match {
+      case ttc: TranslatableTextContent =>
+        val key = ttc.getKey
+        // Check for standard vanilla join/leave message keys
+        if (
+          key == "multiplayer.player.joined" ||
+          key == "multiplayer.player.left" ||
+          key == "multiplayer.player.joined.renamed"
+        ) {
+          // This is a default join/leave message, suppress it by returning null.
+          return null
+        }
+      case _ =>
+      // The message content is not TranslatableTextContent,
+      // or it's a TranslatableTextContent with a different key.
+      // Do nothing, allow the message.
+    }
+    // Allow other game messages that don't match the suppression criteria.
+    message
   }
 
   private def onChatMessage(
@@ -59,15 +110,44 @@ object ChatHandler {
       return
     }
 
-    val hasPrefix = rawMessage.startsWith("!")
+    if (rawMessage.trim.isEmpty) {
+      // Don't process empty messages
+      return
+    }
+
+    // Check if the sender is in a team and the message starts with the team chat prefix
+    val senderTeamOption: Option[Team] = Option(
+      sender.getScoreboard.getPlayerTeam(sender.getName.getString)
+    )
+
+    if (rawMessage.startsWith(TEAM_CHAT_PREFIX) && senderTeamOption.isDefined) {
+      val teamMessageContent =
+        rawMessage.substring(TEAM_CHAT_PREFIX.length).trim
+      if (teamMessageContent.nonEmpty) {
+        handleTeamMessage(
+          server,
+          sender,
+          senderTeamOption.get,
+          teamMessageContent
+        )
+      }
+      // Regardless of whether content was empty, consume the message if it started with team prefix
+      return
+    }
+
+    // If not team chat, proceed with global/local logic
+    val forceGlobalPrefix = "!" // Existing prefix for forcing global
+    val hasForceGlobalPrefix = rawMessage.startsWith(forceGlobalPrefix)
     val prefersPrefixForGlobal =
       LGChat.getPlayerPrefersPrefixForGlobal(sender.getUuid)
 
     val (isEffectivelyGlobal: Boolean, finalMessageContent: String) = {
-      if (hasPrefix) {
-        (prefersPrefixForGlobal, rawMessage.substring(1).trim())
+      if (hasForceGlobalPrefix) {
+        // If force global prefix is used, it's global, remove prefix
+        (true, rawMessage.substring(forceGlobalPrefix.length).trim())
       } else {
-        (!prefersPrefixForGlobal, rawMessage.trim())
+        // No force global prefix, use player preference
+        (prefersPrefixForGlobal, rawMessage.trim())
       }
     }
 
@@ -81,7 +161,11 @@ object ChatHandler {
       handleLocalMessage(server, sender, finalMessageContent)
     }
 
-    LGChat.LOGGER.info(f"<${sender.getName.getString}%s> ${rawMessage}%s")
+    // Log the original raw message to the server console
+    // Note: Team messages are logged separately in handleTeamMessage
+    if (!rawMessage.startsWith(TEAM_CHAT_PREFIX)) { // Only log non-team messages here
+      LGChat.LOGGER.info(f"<${sender.getName.getString}%s> ${rawMessage}%s")
+    }
   }
 
   private def handleGlobalMessage(
@@ -93,30 +177,26 @@ object ChatHandler {
     val defaultNameColor = Formatting.YELLOW
     val msgColor = Formatting.WHITE
 
-    // Використовуємо Lang.get для отримання тексту символу чату
     val symbolText: Text = Lang.get(MessageKey.SymbolLangGlobalChat)
-
     val actualNameColor = getPlayerNameColor(sender, defaultNameColor)
 
     val formattedMessage: MutableText = Text
-      .empty() // Починаємо з порожнього тексту
-      .append(Text.literal("[").formatted(prefixColor)) // Відкриваюча дужка
+      .empty()
+      .append(Text.literal("[").formatted(prefixColor))
       .append(
         symbolText.copy().setStyle(Style.EMPTY.withFormatting(prefixColor))
-      ) // Символ чату з кольором префіксу
+      )
+      .append(Text.literal("] ").formatted(prefixColor))
+      // Explicitly set style for player name to prevent color bleeding
       .append(
-        Text.literal("] ").formatted(prefixColor)
-      ) // Закриваюча дужка і пробіл
-      .append(
-        sender.getDisplayName.copy().formatted(actualNameColor)
-      ) // Ім'я гравця
-      .append(Text.literal(": ").formatted(prefixColor)) // Розділювач
-      .append(Text.literal(messageContent).formatted(msgColor)) // Повідомлення
+        sender.getDisplayName
+          .copy()
+          .setStyle(Style.EMPTY.withFormatting(actualNameColor))
+      )
+      .append(Text.literal(": ").formatted(prefixColor))
+      .append(Text.literal(messageContent).formatted(msgColor))
 
-    server.getPlayerManager.broadcast(
-      formattedMessage,
-      false
-    )
+    server.getPlayerManager.broadcast(formattedMessage, false)
   }
 
   private def handleLocalMessage(
@@ -129,7 +209,6 @@ object ChatHandler {
     val msgColor = Formatting.GRAY
 
     val symbolText: Text = Lang.get(MessageKey.SymbolLangLocalChat)
-
     val radiusSquared = LGChat.LOCAL_CHAT_RADIUS_SQUARED
     val actualNameColor = getPlayerNameColor(sender, defaultNameColor)
 
@@ -140,13 +219,17 @@ object ChatHandler {
         symbolText.copy().setStyle(Style.EMPTY.withFormatting(prefixColor))
       )
       .append(Text.literal("] ").formatted(prefixColor))
-      .append(sender.getDisplayName.copy().formatted(actualNameColor))
+      // Explicitly set style for player name to prevent color bleeding
+      .append(
+        sender.getDisplayName
+          .copy()
+          .setStyle(Style.EMPTY.withFormatting(actualNameColor))
+      )
       .append(Text.literal(": ").formatted(prefixColor))
       .append(Text.literal(messageContent).formatted(msgColor))
 
     val senderWorld: World = sender.getWorld
-    val allPlayers =
-      server.getPlayerManager.getPlayerList.asScala
+    val allPlayers = server.getPlayerManager.getPlayerList.asScala
 
     sender.sendMessage(formattedMessage, false)
 
@@ -161,15 +244,76 @@ object ChatHandler {
       }
   }
 
+  def handleTeamMessage(
+      server: MinecraftServer,
+      sender: ServerPlayerEntity,
+      senderTeam: Team,
+      messageContent: String
+  ): Unit = {
+    val teamChatColorConfig = senderTeam.getColor
+    // Use the team's color for the prefix, or the default color if the team color is not set
+    val prefixActualColor =
+      if (
+        teamChatColorConfig != Formatting.RESET && teamChatColorConfig.isColor
+      )
+        teamChatColorConfig
+      else
+        Formatting.AQUA // Default color for team chat (can be changed)
+
+    val defaultNameColor =
+      prefixActualColor // Default name color can also be based on the team color
+    val msgColor = Formatting.WHITE
+
+    val symbolText: Text = Lang.get(MessageKey.SymbolTeamChat)
+
+    // getPlayerNameColor will determine the player's actual name color, taking into account their team's color
+    val actualNameColor = getPlayerNameColor(sender, defaultNameColor)
+
+    val formattedMessage: MutableText = Text
+      .empty()
+      .append(Text.literal("[").formatted(prefixActualColor))
+      .append(
+        symbolText
+          .copy()
+          .setStyle(Style.EMPTY.withFormatting(prefixActualColor))
+      )
+      .append(Text.literal("] ").formatted(prefixActualColor))
+      // Explicitly set style for player name to prevent color bleeding
+      .append(
+        sender.getDisplayName
+          .copy()
+          .setStyle(Style.EMPTY.withFormatting(actualNameColor))
+      )
+      .append(Text.literal(": ").formatted(prefixActualColor))
+      .append(Text.literal(messageContent).formatted(msgColor))
+
+    val teamName = senderTeam.getName // For filtering
+    val teamMembers = server.getPlayerManager.getPlayerList.asScala
+      .filter { player =>
+        Option(player.getScoreboard.getPlayerTeam(player.getName.getString))
+          .exists(
+            _.getName == teamName
+          ) // Check if the player belongs to the same team
+      }
+
+    teamMembers.foreach { member =>
+      member.sendMessage(formattedMessage, false)
+    }
+
+    // Log team chat to the server console
+    LGChat.LOGGER.info(
+      f"[TEAMCHAT:${teamName}] <${sender.getName.getString}%s> ${messageContent}%s"
+    )
+  }
+
   private def onPlayerJoin(
       handler: ServerPlayNetworkHandler,
-      sender: PacketSender,
+      packetSender: PacketSender,
       server: MinecraftServer
   ): Unit = {
     val player = handler.getPlayer
     val prefixColor = Formatting.GREEN
-    val defaultNameColor =
-      Formatting.YELLOW // Колір імені за замовчуванням для повідомлень про вхід/вихід
+    val defaultNameColor = Formatting.YELLOW
 
     val playerNameText = player.getDisplayName
       .copy()
@@ -180,24 +324,16 @@ object ChatHandler {
       .formatted(prefixColor)
       .append(playerNameText)
 
-    server.getPlayerManager.broadcast(
-      joinMessage,
-      false
-    ) // false - не надсилати в action bar
-    // За замовчуванням, ванільне повідомлення про вхід також буде показано.
-    // Якщо ви хочете його прибрати, потрібні додаткові кроки (наприклад, через міксіни або `/gamerule announceAdvancements false`,
-    // але останнє вимкне і інші системні повідомлення).
+    server.getPlayerManager.broadcast(joinMessage, false)
   }
 
-  // Обробник відключення гравця
   private def onPlayerDisconnect(
       handler: ServerPlayNetworkHandler,
       server: MinecraftServer
   ): Unit = {
     val player = handler.getPlayer
     val prefixColor = Formatting.RED
-    val defaultNameColor =
-      Formatting.GREEN // Колір імені за замовчуванням для повідомлень про вхід/вихід
+    val defaultNameColor = Formatting.YELLOW
 
     val playerNameText = player.getDisplayName
       .copy()
@@ -209,6 +345,5 @@ object ChatHandler {
       .append(playerNameText)
 
     server.getPlayerManager.broadcast(leaveMessage, false)
-    // Аналогічно до onPlayerJoin, ванільне повідомлення про вихід також буде показано.
   }
 }
